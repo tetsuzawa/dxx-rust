@@ -1,2 +1,2 @@
-# rust-dxx
+# dxx
 .DXX io library
