@@ -51,6 +51,22 @@ impl DType {
         };
         DType::from_str(suffix)
     }
+
+    pub fn byte_width(&self) -> u32 {
+        match *self {
+            DType::DSA | DType::DSB => 2,
+            DType::DFA | DType::DFB => 4,
+            DType::DDA | DType::DDB => 8,
+        }
+    }
+
+    pub fn bits_width(&self) -> u32 {
+        match *self {
+            DType::DSA | DType::DSB => 16,
+            DType::DFA | DType::DFB => 32,
+            DType::DDA | DType::DDB => 64,
+        }
+    }
 }
 
 
