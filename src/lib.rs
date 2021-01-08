@@ -1,9 +1,13 @@
 use std::io::prelude::*;
-use std::error::Error;
+use std::io::Cursor;
 use std::fmt;
 use std::fmt::{Formatter, Display};
 use std::str;
 use std::str::FromStr;
+use std::error::Error;
+use std::fs;
+use std::fs::File;
+use byteorder::{ReadBytesExt, LittleEndian};
 
 enum DType {
     DSA,
@@ -44,7 +48,7 @@ impl FromStr for DType {
 }
 
 impl DType {
-    pub fn from_filename(filename: &str) -> Result<DTypeKind, &'static str> {
+    pub fn from_filename(filename: &str) -> Result<DType, &'static str> {
         let suffix = match filename.split(".").last() {
             Some(s) => s,
             None => return Err("invalid file name") // TODO improve filename
@@ -69,4 +73,30 @@ impl DType {
     }
 }
 
+pub fn len_file(filename: &str) -> Result<u64, Box<dyn Error>> {
+    let meta = fs::metadata(filename)?;
+    Ok(meta.len())
+}
+
+pub fn read(filename: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+    let dtype = DType::from_filename(filename)?;
+
+    let mut f = File::open(filename)?;
+    let file_size = f.metadata()?.len();
+    let mut raw_data = Vec::with_capacity(file_size as usize);
+    f.read_to_end(&mut raw_data)?;
+
+    let samples = &file_size / dtype.byte_width() as u64;
+    let mut data = Vec::with_capacity(samples as usize);
+
+    let mut buf = Vec::with_capacity(dtype.byte_width() as usize);
+
+    let mut rdr = Cursor::new(raw_data);
+    match dtype {
+        DType::DSB => {rdr.read_i16_into::<LittleEndian>(&mut data)},
+        DType::DFB => rdr.read_f32_into::<LittleEndian>(&mut data),
+        DType::DDB => rdr.read_f64_into::<LittleEndian>(&mut data),
+        _ => Ok(()),//TODO
+    };
+}
 
