@@ -1,5 +1,5 @@
 use std::io::prelude::*;
-use std::io::Cursor;
+use std::io::{Cursor, BufReader};
 use std::fmt;
 use std::fmt::{Formatter, Display};
 use std::str;
@@ -8,6 +8,8 @@ use std::error::Error;
 use std::fs;
 use std::fs::File;
 use byteorder::{ReadBytesExt, LittleEndian};
+
+const TEXT_BIN_FILE_SIZE_MEAN_RATE: &'static usize = &13;
 
 enum DType {
     DSA,
@@ -78,25 +80,56 @@ pub fn len_file(filename: &str) -> Result<u64, Box<dyn Error>> {
     Ok(meta.len())
 }
 
-pub fn read(filename: &str) -> Result<Vec<f64>, Box<dyn Error>> {
-    let dtype = DType::from_filename(filename)?;
-
+pub fn read_file(filename: &str) -> Result<Vec<f64>, Box<dyn Error>> {
     let mut f = File::open(filename)?;
-    let file_size = f.metadata()?.len();
-    let mut raw_data = Vec::with_capacity(file_size as usize);
-    f.read_to_end(&mut raw_data)?;
-
-    let samples = &file_size / dtype.byte_width() as u64;
-    let mut data = Vec::with_capacity(samples as usize);
-
-    let mut buf = Vec::with_capacity(dtype.byte_width() as usize);
-
-    let mut rdr = Cursor::new(raw_data);
+    let file_size = f.metadata()?.len() as usize;
+    let dtype = DType::from_filename(filename)?;
     match dtype {
-        DType::DSB => {rdr.read_i16_into::<LittleEndian>(&mut data)},
-        DType::DFB => rdr.read_f32_into::<LittleEndian>(&mut data),
-        DType::DDB => rdr.read_f64_into::<LittleEndian>(&mut data),
-        _ => Ok(()),//TODO
-    };
+        DType::DSA |
+        DType::DFA |
+        DType::DDA => read_DXA(src, file_size),
+
+        DType::DSB => read_DSB(src, file_size),
+        DType::DFB => read_DFB(src, file_size),
+        DType::DDB => read_DDB(src, file_size),
+    }
+}
+
+fn read_DXA<T: Read>(src: T, size: usize) -> Result<Vec<f64>, Box<Error>> {
+    let mut ret: Vec<f64> = Vec::with_capacity(size / *TEXT_BIN_FILE_SIZE_MEAN_RATE);
+    for result in BufReader::new(src).lines() {
+        let l = result?;
+        let buf: f64 = From::from(l);
+        ret.push(buf);
+    }
+    Ok(ret)
+}
+
+fn read_DSB<T: Read>(src: T, size: usize) -> Result<Vec<f64>, Box<Error>> {
+    let byte_width = DType::DSB.byte_width();
+    let mut buf: Vec<i16> = vec![0; size / byte_width];
+    let mut rdr = Cursor::new(src);
+    rdr.read_i16_into::<LittleEndian>(&mut buf);
+    buf.iter().map(|x| f64::from(*x)).collect()
+}
+
+fn read_DFB<T: Read>(src: T, size: usize) -> Result<Vec<f64>, Box<Error>> {
+    let byte_width = DType::DFB.byte_width();
+    let mut buf: Vec<f32> = vec![0.; size / byte_width];
+    let mut rdr = Cursor::new(src);
+    rdr.read_f32_into::<LittleEndian>(&mut buf);
+    buf.iter().map(|x| f64::from(*x)).collect()
+}
+
+fn read_DDB<T: Read>(src: T, size: usize) -> Result<Vec<f64>, Box<Error>> {
+    let byte_width = DType::DDB.byte_width();
+    let mut buf: Vec<f64> = vec![0.; size / byte_width];
+    let mut rdr = Cursor::new(src);
+    rdr.read_f64_into::<LittleEndian>(&mut buf);
+    buf.iter().map(|x| f64::from(*x)).collect()
+}
+
+fn i16s_to_f64s(src: Vec<i16>) -> Vec<f64> {
+    src.iter().map(|x| f64::from(*x)).collect()
 }
 
