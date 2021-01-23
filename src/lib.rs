@@ -129,7 +129,3 @@ fn read_ddb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error
     Ok(buf.iter().map(|x| f64::from(*x)).collect())
 }
 
-fn i16s_to_f64s(src: Vec<i16>) -> Vec<f64> {
-    src.iter().map(|x| f64::from(*x)).collect()
-}
-
