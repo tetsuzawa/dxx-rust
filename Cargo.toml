@@ -3,6 +3,8 @@ name = "dxx"
 version = "0.1.0"
 authors = ["Tetsu Takizawa <tetsu.takizawa5@gmail.com>"]
 edition = "2018"
+description = "A library for io and converting audio files with a .DXX extension."
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
