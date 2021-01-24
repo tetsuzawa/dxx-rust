@@ -41,7 +41,7 @@ fn main() -> Result<()> {
 
 fn overlap_add(opt: Opt) -> Result<()> {
     if !opt.subject.is_dir() {
-        return Err(Error::msg("subject is not directory"))
+        return Err(Error::msg("subject is not directory"));
     }
     let subject = match opt.subject.to_str() {
         Some(s) => s,
@@ -49,7 +49,7 @@ fn overlap_add(opt: Opt) -> Result<()> {
     };
 
     if !opt.sound_file.is_file() {
-        return Err(Error::msg("sound_file is not a file"))
+        return Err(Error::msg("sound_file is not a file"));
     }
     let sound_file = match opt.sound_file.to_str() {
         Some(s) => s,
@@ -61,7 +61,7 @@ fn overlap_add(opt: Opt) -> Result<()> {
     let angle = opt.angle;
 
     if !opt.output.is_dir() {
-        return Err(Error::msg("output is not directory"))
+        return Err(Error::msg("output is not directory"));
     }
     let output = match opt.output.to_str() {
         Some(s) => s,
@@ -109,7 +109,7 @@ fn overlap_add(opt: Opt) -> Result<()> {
                 }
             }
 
-            let output_name = format!("{}/move_judge_w{:>03}_mt{:>03}_{}_{}_{}.DDB", output, move_width, move_velocity, direction, angle, lr);
+            let output_name = format!("{}/move_judge_w{:>04}_mt{:>04}_{}_{}_{}.DDB", output, move_width, move_velocity, direction, angle, lr);
             let output_len = move_out.len();
             dxx::write_file(output_name.as_str(), move_out)?;
             eprintln!("{}, length={}", output_name, output_len);
@@ -136,14 +136,14 @@ fn calc_angles(move_width: &u32, angle: &u32, clockwise: bool) -> Vec<i32> {
 
     let mut angles = Vec::with_capacity(move_width as usize);
     for i in 0..move_width {
-        let mut data_angle: i32 = (i % (move_width * 2)) as i32;
+        let mut data_angle = i % (move_width * 2);
         if data_angle > move_width {
             data_angle = move_width * 2 - data_angle
         }
         if !clockwise {
             data_angle = -1 * data_angle
         }
-        angles.push((start_angle as i32 + data_angle) % 3600);
+        angles.push((start_angle + data_angle) % 3600);
     }
     angles
 }
