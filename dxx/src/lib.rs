@@ -5,10 +5,11 @@ use std::fmt;
 use std::fmt::{Formatter, Display};
 use std::str;
 use std::str::FromStr;
-use std::error::Error;
 use std::fs;
 use std::fs::File;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
+use anyhow::Result;
+use thiserror::Error;
 
 const TEXT_BIN_FILE_SIZE_MEAN_RATE: &'static usize = &13;
 const DSX_AMP: i16 = i16::max_value();
@@ -39,7 +40,7 @@ impl Display for DType {
 }
 
 impl FromStr for DType {
-    type Err = &'static str;
+    type Err = DTypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -49,19 +50,27 @@ impl FromStr for DType {
             "DSB" => Ok(DType::DSB),
             "DFB" => Ok(DType::DFB),
             "DDB" => Ok(DType::DDB),
-            _ => Err("invalid string")
+            _ => Err(DTypeError::InvalidString(s.to_string()))
         }
     }
 }
 
 impl DType {
     /// from_filename determines the data type from the specified file name.
-    pub fn from_filename(filename: &str) -> Result<DType, &'static str> {
+    pub fn from_filename(filename: &str) -> Result<DType, DTypeError> {
         let suffix = match filename.split(".").last() {
             Some(s) => s,
-            None => return Err("invalid file name") // TODO improve filename
+            None => return Err(DTypeError::InvalidFileSuffix("".to_string()))
         };
-        DType::from_str(suffix)
+        match suffix {
+            "DSA" => Ok(DType::DSA),
+            "DFA" => Ok(DType::DFA),
+            "DDA" => Ok(DType::DDA),
+            "DSB" => Ok(DType::DSB),
+            "DFB" => Ok(DType::DFB),
+            "DDB" => Ok(DType::DDB),
+            _ => Err(DTypeError::InvalidFileSuffix(suffix.to_string()))
+        }
     }
 
     /// byte_width returns the byte width of a sample.
@@ -83,8 +92,17 @@ impl DType {
     }
 }
 
+
+#[derive(Error, Debug)]
+pub enum DTypeError {
+    #[error("invalid file suffix. want: DXX, got: {0}")]
+    InvalidFileSuffix(String),
+    #[error("invalid string. want: [DSA, DFA, DDA, DSB, DFB, DDB], got: {0}")]
+    InvalidString(String),
+}
+
 /// len_file returns the byte length of the specified file.
-pub fn len_file(filename: &str) -> Result<u64, Box<dyn Error>> {
+pub fn len_file(filename: &str) -> Result<u64> {
     let meta = fs::metadata(filename)?;
     Ok(meta.len())
 }
@@ -92,7 +110,7 @@ pub fn len_file(filename: &str) -> Result<u64, Box<dyn Error>> {
 /// read_file reads .DXX file.
 /// This func determines the data type from the filename extension and reads that data.
 /// The return type is Vec<f64> to make the data easier to handle.
-pub fn read_file(filename: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn read_file(filename: &str) -> Result<Vec<f64>> {
     let mut f = File::open(filename)?;
     let file_size = f.metadata()?.len() as usize;
     let dtype = DType::from_filename(filename)?;
@@ -109,7 +127,7 @@ pub fn read_file(filename: &str) -> Result<Vec<f64>, Box<dyn Error>> {
 }
 
 
-fn read_dxa<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+fn read_dxa<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>> {
     let mut ret: Vec<f64> = Vec::with_capacity(size / *TEXT_BIN_FILE_SIZE_MEAN_RATE);
     for result in BufReader::new(src).lines() {
         let line = result?;
@@ -119,7 +137,7 @@ fn read_dxa<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error
     Ok(ret)
 }
 
-fn read_dsb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+fn read_dsb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>> {
     let byte_width = DType::DSB.byte_width();
     let mut buf: Vec<i16> = vec![0; size / byte_width as usize];
     let mut reader = BufReader::new(src);
@@ -127,7 +145,7 @@ fn read_dsb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error
     Ok(buf.iter().map(|x| f64::from(*x)).collect())
 }
 
-fn read_dfb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+fn read_dfb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>> {
     let byte_width = DType::DFB.byte_width();
     let mut buf: Vec<f32> = vec![0.; size / byte_width as usize];
     let mut reader = BufReader::new(src);
@@ -135,7 +153,7 @@ fn read_dfb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error
     Ok(buf.iter().map(|x| f64::from(*x)).collect())
 }
 
-fn read_ddb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+fn read_ddb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>> {
     let byte_width = DType::DDB.byte_width();
     let mut buf: Vec<f64> = vec![0.; size / byte_width as usize];
     let mut reader = BufReader::new(src);
@@ -145,7 +163,7 @@ fn read_ddb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error
 
 /// write_file writes data to .DXX file.
 /// This func determines the data type from the filename extension and writes the data to the file.
-pub fn write_file(filename: &str, src: Vec<f64>) -> Result<(), Box<dyn Error>> {
+pub fn write_file(filename: &str, src: Vec<f64>) -> Result<()> {
     let mut f = File::create(filename)?;
     let dtype = DType::from_filename(filename)?;
 
@@ -160,7 +178,7 @@ pub fn write_file(filename: &str, src: Vec<f64>) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn write_dxa<T: Write, U: std::fmt::Display>(dst: T, src: Vec<U>) -> Result<(), Box<dyn Error>> {
+fn write_dxa<T: Write, U: std::fmt::Display>(dst: T, src: Vec<U>) -> Result<(), > {
     let mut writer = BufWriter::new(dst);
     for x in src {
         writeln!(writer, "{}", x)?;
@@ -168,7 +186,7 @@ fn write_dxa<T: Write, U: std::fmt::Display>(dst: T, src: Vec<U>) -> Result<(), 
     Ok(())
 }
 
-fn write_dsb<T: Write>(dst: T, src: Vec<i16>) -> Result<(), Box<dyn Error>> {
+fn write_dsb<T: Write>(dst: T, src: Vec<i16>) -> Result<()> {
     let mut writer = BufWriter::new(dst);
     for x in src {
         writer.write_i16::<LittleEndian>(x)?;
@@ -176,7 +194,7 @@ fn write_dsb<T: Write>(dst: T, src: Vec<i16>) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn write_dfb<T: Write>(dst: T, src: Vec<f32>) -> Result<(), Box<dyn Error>> {
+fn write_dfb<T: Write>(dst: T, src: Vec<f32>) -> Result<()> {
     let mut writer = BufWriter::new(dst);
     for x in src {
         writer.write_f32::<LittleEndian>(x)?;
@@ -184,7 +202,7 @@ fn write_dfb<T: Write>(dst: T, src: Vec<f32>) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn write_ddb<T: Write>(dst: T, src: Vec<f64>) -> Result<(), Box<dyn Error>> {
+fn write_ddb<T: Write>(dst: T, src: Vec<f64>) -> Result<()> {
     let mut writer = BufWriter::new(dst);
     for x in src {
         writer.write_f64::<LittleEndian>(x)?;
