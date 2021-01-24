@@ -240,5 +240,19 @@ mod tests {
         let src: Vec<f64> = vec![5., -2., 4., -3.];
         write_file("a.DDB", src).unwrap();
     }
-
+    #[test]
+    fn test_convert() {
+        let data = read_file("sine.DSB").unwrap();
+        write_file("sine.DSA", data).unwrap();
+        let data = read_file("sine.DSB").unwrap();
+        write_file("sine.DFA", data).unwrap();
+        let data = read_file("sine.DSB").unwrap();
+        write_file("sine.DFB", data).unwrap();
+        let data = read_file("sine.DSB").unwrap();
+        write_file("sine.DDA", data).unwrap();
+        let data = read_file("sine.DSB").unwrap();
+        write_file("sine.DDB", data).unwrap();
+        let data = read_file("sine.DSA").unwrap();
+        write_file("sine1.DSB", data).unwrap();
+    }
 }
