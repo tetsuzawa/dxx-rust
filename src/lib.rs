@@ -14,7 +14,7 @@ const DSX_AMP: i16 = i16::max_value();
 const DFX_AMP: f32 = 10000.;
 const DDX_AMP: f64 = 10000.;
 
-enum DType {
+pub enum DType {
     DSA,
     DFA,
     DDA,
