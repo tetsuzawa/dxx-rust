@@ -109,7 +109,7 @@ fn overlap_add(opt: Opt) -> Result<()> {
                 }
             }
 
-            let output_name = format!("{}/move_judge_w{:>04}_mt{:>04}_{}_{}_{}.DDB", output, move_width, move_velocity, direction, angle, lr);
+            let output_name = format!("{}/move_judge_w{:>04}_mt{:>04}_{}_{:>04}_{}.DDB", output, move_width, move_velocity, direction, angle, lr);
             let output_len = move_out.len();
             dxx::write_file(output_name.as_str(), move_out)?;
             eprintln!("{}, length={}", output_name, output_len);
