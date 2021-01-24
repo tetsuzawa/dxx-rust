@@ -1,3 +1,4 @@
+/// dxx is a library for io and converting audio files with a .DXX extension.
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::fmt;
@@ -14,6 +15,7 @@ const DSX_AMP: i16 = i16::max_value();
 const DFX_AMP: f32 = 10000.;
 const DDX_AMP: f64 = 10000.;
 
+/// DType is an enum for describing data type of file.
 pub enum DType {
     DSA,
     DFA,
@@ -53,6 +55,7 @@ impl FromStr for DType {
 }
 
 impl DType {
+    /// from_filename determines the data type from the specified file name.
     pub fn from_filename(filename: &str) -> Result<DType, &'static str> {
         let suffix = match filename.split(".").last() {
             Some(s) => s,
@@ -61,6 +64,7 @@ impl DType {
         DType::from_str(suffix)
     }
 
+    /// byte_width returns the byte width of a sample.
     pub fn byte_width(&self) -> u32 {
         match *self {
             DType::DSA | DType::DSB => 2,
@@ -69,6 +73,7 @@ impl DType {
         }
     }
 
+    /// byte_width returns the bits width of a sample.
     pub fn bits_width(&self) -> u32 {
         match *self {
             DType::DSA | DType::DSB => 16,
@@ -78,11 +83,15 @@ impl DType {
     }
 }
 
+/// len_file returns the byte length of the specified file.
 pub fn len_file(filename: &str) -> Result<u64, Box<dyn Error>> {
     let meta = fs::metadata(filename)?;
     Ok(meta.len())
 }
 
+/// read_file reads .DXX file.
+/// This func determines the data type from the filename extension and reads that data.
+/// The return type is Vec<f64> to make the data easier to handle.
 pub fn read_file(filename: &str) -> Result<Vec<f64>, Box<dyn Error>> {
     let mut f = File::open(filename)?;
     let file_size = f.metadata()?.len() as usize;
@@ -134,6 +143,8 @@ fn read_ddb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error
     Ok(buf.iter().map(|x| f64::from(*x)).collect())
 }
 
+/// write_file writes data to .DXX file.
+/// This func determines the data type from the filename extension and writes the data to the file.
 pub fn write_file(filename: &str, src: Vec<f64>) -> Result<(), Box<dyn Error>> {
     let mut f = File::create(filename)?;
     let dtype = DType::from_filename(filename)?;
