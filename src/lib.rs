@@ -203,18 +203,6 @@ fn max_f64s(src: &Vec<f64>) -> f64 {
     src.iter().fold(0.0 / 0.0, |m, v| v.max(m))
 }
 
-fn min_f64s(src: &Vec<f64>) -> f64 {
-    src.iter().fold(0.0 / 0.0, |m, v| v.min(m))
-}
-
-fn max_f32s(src: &Vec<f32>) -> f32 {
-    src.iter().fold(0.0 / 0.0, |m, v| v.max(m))
-}
-
-fn min_f32s(src: &Vec<f32>) -> f32 {
-    src.iter().fold(0.0 / 0.0, |m, v| v.min(m))
-}
-
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -240,6 +228,7 @@ mod tests {
         let src: Vec<f64> = vec![5., -2., 4., -3.];
         write_file("a.DDB", src).unwrap();
     }
+
     #[test]
     fn test_convert() {
         let data = read_file("sine.DSB").unwrap();
