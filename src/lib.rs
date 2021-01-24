@@ -1,5 +1,5 @@
 use std::io::prelude::*;
-use std::io::{BufReader};
+use std::io::{BufReader, BufWriter};
 use std::fmt;
 use std::fmt::{Formatter, Display};
 use std::str;
@@ -8,7 +8,7 @@ use std::error::Error;
 use std::fs;
 use std::fs::File;
 // use byteorder::{LittleEndian};
-use byteorder::{ReadBytesExt, LittleEndian};
+use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
 const TEXT_BIN_FILE_SIZE_MEAN_RATE: &'static usize = &13;
 
@@ -111,21 +111,85 @@ fn read_dxa<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error
 fn read_dsb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error>> {
     let byte_width = DType::DSB.byte_width();
     let mut buf: Vec<i16> = vec![0; size / byte_width as usize];
-    src.read_i16_into::<LittleEndian>(&mut buf)?;
+    let mut reader = BufReader::new(src);
+    reader.read_i16_into::<LittleEndian>(&mut buf)?;
     Ok(buf.iter().map(|x| f64::from(*x)).collect())
 }
 
 fn read_dfb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error>> {
     let byte_width = DType::DFB.byte_width();
     let mut buf: Vec<f32> = vec![0.; size / byte_width as usize];
-    src.read_f32_into::<LittleEndian>(&mut buf)?;
+    let mut reader = BufReader::new(src);
+    reader.read_f32_into::<LittleEndian>(&mut buf)?;
     Ok(buf.iter().map(|x| f64::from(*x)).collect())
 }
 
 fn read_ddb<T: Read>(src: &mut T, size: usize) -> Result<Vec<f64>, Box<dyn Error>> {
     let byte_width = DType::DDB.byte_width();
     let mut buf: Vec<f64> = vec![0.; size / byte_width as usize];
-    src.read_f64_into::<LittleEndian>(&mut buf)?;
+    let mut reader = BufReader::new(src);
+    reader.read_f64_into::<LittleEndian>(&mut buf)?;
     Ok(buf.iter().map(|x| f64::from(*x)).collect())
 }
+//
+// pub fn write_file(filename: &str, src: Vec<f64>) -> Result<(), Box<dyn Error>> {
+//     let mut f = File::create(filename)?;
+//     let file_size = f.metadata()?.len() as usize;
+//     let dtype = DType::from_filename(filename)?;
+//
+//     match dtype {
+//         DType::DSA |
+//         DType::DFA |
+//         DType::DDA => read_dxa(&mut f, file_size),
+//
+//         DType::DSB => read_dsb(&mut f, file_size),
+//         DType::DFB => read_dfb(&mut f, file_size),
+//         DType::DDB => read_ddb(&mut f, file_size),
+//     }
+// }
+//
+// fn write_dxa<T: Write>(dst: T, src: Vec<f64>, dtype: DType) -> Result<(), Box<dyn Error>> {
+//     let mut writer = BufWriter::new(dst);
+//     src.iter().map(|x| writer.write_fmt()
+//     for result in BufWriter::new(dst).lines() {
+//         let line = result?;
+//         let buf: f64 = line.parse::<f64>()?;
+//         ret.push(buf);
+//     }
+//     Ok(ret)
+// }
 
+
+fn f64s_to_i16s(src: &Vec<f64>) -> Vec<i16> {
+    let amp = 1 << (16 - 1) - 1;
+    let abs_src: Vec<f64> = src.iter().map(|x| x.clone().abs()).collect();
+    let max = max_f64s(&abs_src);
+    src.iter().map(|x| (x / max * amp as f64) as i16).collect()
+}
+
+fn max_f64s(src: &Vec<f64>) -> f64 {
+    src.iter().fold(0.0 / 0.0, |m, v| v.max(m))
+}
+
+fn min_f64s(src: &Vec<f64>) -> f64 {
+    src.iter().fold(0.0 / 0.0, |m, v| v.min(m))
+}
+
+fn max_f32s(src: &Vec<f32>) -> f32 {
+    src.iter().fold(0.0 / 0.0, |m, v| v.max(m))
+}
+
+fn min_f32s(src: &Vec<f32>) -> f32 {
+    src.iter().fold(0.0 / 0.0, |m, v| v.min(m))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::f64s_to_i16s;
+
+    #[test]
+    fn test_f64s_to_i16s() {
+        let src: Vec<f64> = vec![5., -2., 4., -3.];
+        assert_eq!(f64s_to_i16s(&src), vec![16384, -6553, 13107, -9830]);
+    }
+}
