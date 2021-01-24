@@ -7,7 +7,6 @@ use std::path::PathBuf;
 /// overlap-add-middle calculates moving sounds through the angle
 /// from the specified move_width and move_velocity.
 #[derive(StructOpt, Debug)]
-#[structopt()]
 struct Opt {
     /// Directory of SUBJECT that has SLTF directory.
     /// i.e. `path/to/SUBJECTS/NAME`
@@ -30,7 +29,7 @@ struct Opt {
     /// i.e. 450
     angle: u32,
 
-    /// Output path the convolved sound is placed.
+    /// Output path where convolved sound is placed.
     output: PathBuf,
 }
 
@@ -41,22 +40,33 @@ fn main() -> Result<()> {
 
 
 fn overlap_add(opt: Opt) -> Result<()> {
+    if !opt.subject.is_dir() {
+        return Err(Error::msg("subject is not directory"))
+    }
     let subject = match opt.subject.to_str() {
         Some(s) => s,
         None => return Err(Error::msg("subject is empty"))
     };
+
+    if !opt.sound_file.is_file() {
+        return Err(Error::msg("sound_file is not a file"))
+    }
     let sound_file = match opt.sound_file.to_str() {
         Some(s) => s,
         None => return Err(Error::msg("sound_file is empty"))
     };
+
     let move_width = opt.move_width;
     let move_velocity = opt.move_velocity;
     let angle = opt.angle;
+
+    if !opt.output.is_dir() {
+        return Err(Error::msg("output is not directory"))
+    }
     let output = match opt.output.to_str() {
         Some(s) => s,
         None => return Err(Error::msg("output is empty"))
     };
-
 
     // サンプリング周波数 [sample/sec]
     let sampling_freq = 48000;
@@ -83,10 +93,10 @@ fn overlap_add(opt: Opt) -> Result<()> {
             let clockwise = *direction == "c";
             let angles = calc_angles(&move_width, &angle, clockwise);
 
-            for (i, val) in angles.iter().enumerate() {
+            for (i, conv_angle) in angles.iter().enumerate() {
                 let i = i as u32;
                 // SLTFの読み込み
-                let sltf_name = format!("{}/SLTF/SLTF_{}_{}.DDB", subject, val, lr);
+                let sltf_name = format!("{}/SLTF/SLTF_{}_{}.DDB", subject, conv_angle, lr);
                 let sltf = dxx::read_file(sltf_name.as_str())?;
 
                 // 音データと伝達関数の畳込み
@@ -99,7 +109,7 @@ fn overlap_add(opt: Opt) -> Result<()> {
                 }
             }
 
-            let output_name = format!("{}/move_judge_w{:>03}_mt{:>03}d_{}_{}_{}.DDB", output, move_width, move_velocity, direction, angle, lr);
+            let output_name = format!("{}/move_judge_w{:>03}_mt{:>03}_{}_{}_{}.DDB", output, move_width, move_velocity, direction, angle, lr);
             let output_len = move_out.len();
             dxx::write_file(output_name.as_str(), move_out)?;
             eprintln!("{}, length={}", output_name, output_len);
@@ -125,7 +135,7 @@ fn calc_angles(move_width: &u32, angle: &u32, clockwise: bool) -> Vec<i32> {
     } % 3600;
 
     let mut angles = Vec::with_capacity(move_width as usize);
-    for i in 0../Users/tetsu/repo/rust-dxxmove_width {
+    for i in 0..move_width {
         let mut data_angle: i32 = (i % (move_width * 2)) as i32;
         if data_angle > move_width {
             data_angle = move_width * 2 - data_angle
