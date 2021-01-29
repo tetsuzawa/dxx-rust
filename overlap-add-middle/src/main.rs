@@ -18,15 +18,15 @@ struct Opt {
     sound_file: PathBuf,
 
     /// Moving width [10^-1 deg].
-    /// i.e. 080
+    /// i.e. 0080
     move_width: u32,
 
     /// Moving velocity [10^-1 deg/sec].
-    /// i.e. 160
+    /// i.e. 0160
     move_velocity: u32,
 
     /// Angle placed in the middle [10^-1 deg].
-    /// i.e. 450
+    /// i.e. 0450
     angle: u32,
 
     /// Output path where convolved sound is placed.
