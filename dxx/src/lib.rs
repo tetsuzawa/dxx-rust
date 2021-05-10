@@ -111,7 +111,10 @@ pub fn len_file(filename: &str) -> Result<u64> {
 /// This func determines the data type from the filename extension and reads that data.
 /// The return type is Vec<f64> to make the data easier to handle.
 pub fn read_file(filename: &str) -> Result<Vec<f64>> {
-    let mut f = File::open(filename)?;
+    let mut f = match File::open(filename) {
+        Ok(file) => file,
+        Err(error) => return Err(anyhow::Error::msg(format!("opening {}: {}", filename, error)))
+    };
     let file_size = f.metadata()?.len() as usize;
     let dtype = DType::from_filename(filename)?;
 
