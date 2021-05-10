@@ -143,6 +143,9 @@ fn calc_angles(move_width: &u32, angle: &u32, clockwise: bool) -> Vec<i32> {
         if !clockwise {
             data_angle = -1 * data_angle
         }
+        if data_angle < 0 {
+            data_angle += 3600
+        }
         angles.push((start_angle + data_angle) % 3600);
     }
     angles
