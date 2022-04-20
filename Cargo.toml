@@ -3,5 +3,6 @@
 members = [
     "dxx",
     "overlap-add-middle",
-    "overlap-add-middle-360"
+    "overlap-add-middle-360",
+    "overlap-add-start-360"
 ]
